@@ -1,0 +1,19 @@
+{
+    "version": 2,
+    "builds": [
+        {
+            "src": "wsgi.py",
+            "use": "@vercel/python"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/(.*)",
+            "dest": "wsgi.py"
+        }
+    ],
+    "env": {
+        "GOOGLE_API_KEY": "@google_api_key",
+        "GROQ_API_KEY": "@groq_api_key"
+    }
+}

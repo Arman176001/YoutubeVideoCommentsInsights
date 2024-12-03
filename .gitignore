@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Vercel
+.vercel
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Misc
+.DS_Store
+```
+
+And a sample `.env` file:
+
+
+GOOGLE_API_KEY=your_google_api_key
+GROQ_API_KEY=your_groq_api_key
+```
+
+Key things to remember:
+1. Never commit `.env` to version control
+2. Use `.env.example` as a template for other developers
+3. Each developer will need to set up their own `.env` file locally
+4. In Vercel, set environment variables in the dashboard or via CLI
+
+Would you like me to elaborate on any part of the file structure?

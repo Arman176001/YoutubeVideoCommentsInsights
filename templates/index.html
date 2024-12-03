@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Comments Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <h1 class="text-2xl font-bold mb-6 text-center">YouTube Comments Analyzer</h1>
+        <form id="analyzeForm" class="space-y-4">
+            <input 
+                type="text" 
+                id="videoUrl" 
+                name="video_url" 
+                placeholder="Enter YouTube Video URL" 
+                class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+            >
+            <button 
+                type="submit" 
+                class="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition duration-300"
+            >
+                Analyze Comments
+            </button>
+        </form>
+        <div id="loadingIndicator" class="hidden text-center mt-4">
+            <p class="text-gray-600">Analyzing... Please wait</p>
+        </div>
+        <div id="resultContainer" class="mt-4 p-4 bg-gray-50 rounded-md hidden">
+            <h2 class="font-bold mb-2">Analysis Result:</h2>
+            <p id="resultText"></p>
+        </div>
+        <div id="errorContainer" class="mt-4 p-4 bg-red-100 text-red-700 rounded-md hidden">
+            <p id="errorText"></p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('analyzeForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Reset previous state
+            document.getElementById('loadingIndicator').classList.remove('hidden');
+            document.getElementById('resultContainer').classList.add('hidden');
+            document.getElementById('errorContainer').classList.add('hidden');
+            
+            const videoUrl = document.getElementById('videoUrl').value;
+            
+            fetch('/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `video_url=${encodeURIComponent(videoUrl)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loadingIndicator').classList.add('hidden');
+                
+                if (data.error) {
+                    document.getElementById('errorText').textContent = data.error;
+                    document.getElementById('errorContainer').classList.remove('hidden');
+                } else {
+                    document.getElementById('resultText').textContent = data.result;
+                    document.getElementById('resultContainer').classList.remove('hidden');
+                }
+            })
+            .catch(error => {
+                document.getElementById('loadingIndicator').classList.add('hidden');
+                document.getElementById('errorText').textContent = 'An unexpected error occurred';
+                document.getElementById('errorContainer').classList.remove('hidden');
+            });
+        });
+    </script>
+</body>
+</html>
