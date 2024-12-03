@@ -3,4 +3,5 @@ flask-cors
 google-api-python-client
 groq
 youtube-transcript-api
+werkzeug
 python-dotenv
