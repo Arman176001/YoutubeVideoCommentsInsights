@@ -11,9 +11,5 @@
             "src": "/(.*)",
             "dest": "wsgi.py"
         }
-    ],
-    "env": {
-        "GOOGLE_API_KEY": "@google_api_key",
-        "GROQ_API_KEY": "@groq_api_key"
-    }
+    ]
 }
