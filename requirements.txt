@@ -6,3 +6,4 @@ youtube-transcript-api
 werkzeug
 python-dotenv
 gunicorn
+transformers

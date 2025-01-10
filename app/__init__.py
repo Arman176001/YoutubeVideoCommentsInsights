@@ -117,7 +117,39 @@ def create_app():
     @app.route('/')
     def index():
         return render_template('index.html')
+    
+    @app.route('/sentiment',methods=['POST'])
+    def sentiment():
+        video_url = request.form.get('video_url')
+        import re
+        video_id_match = re.search(r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})', video_url)
+        
+        if not video_id_match:
+            return jsonify({"error": "Invalid YouTube URL"}), 400
+        
+        video_id = video_id_match.group(1)
+        
+        try:
+            comments = get_comments(video_id,os.getenv('GOOGLE_API_KEY'))
+            from transformers import pipeline
+            classifier = pipeline(task="text-classification", model="SamLowe/roberta-base-go_emotions", top_k=None)
+            import time
 
+            sentences = ["I am not having a great day"]
+            model_outputs = classifier(sentences)
+            result = {model_outputs[0][i]['label']: [] for i in range(len(model_outputs[0]))}
+
+            start_time = time.time()
+            for i in comments:
+                if len(i)>512:
+                    continue
+                if time.time() - start_time > 100:
+                    break
+                model_outputs = classifier(i)
+                result[model_outputs[0][0]["label"]].append(i)
+            return jsonify({"result": result})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
     @app.route('/analyze', methods=['POST'])
     def analyze():
         video_url = request.form.get('video_url')
