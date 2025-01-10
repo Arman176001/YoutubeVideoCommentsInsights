@@ -7,3 +7,4 @@ werkzeug
 python-dotenv
 gunicorn
 transformers
+torch
