@@ -5,11 +5,13 @@ from googleapiclient.discovery import build
 from groq import Groq
 from youtube_transcript_api import YouTubeTranscriptApi
 from dotenv import load_dotenv
+from transformers import pipeline
 load_dotenv()
 def create_app():
     app = Flask(__name__)
     CORS(app)  # Enable CORS for all routes
-
+    
+    classifier = pipeline(task="text-classification", model="SamLowe/roberta-base-go_emotions", top_k=None)
     def get_comments(video_id, api_key):
         youtube = build('youtube', 'v3', developerKey=api_key)
         comments = []
@@ -131,8 +133,6 @@ def create_app():
         
         try:
             comments = get_comments(video_id,os.getenv('GOOGLE_API_KEY'))
-            from transformers import pipeline
-            classifier = pipeline(task="text-classification", model="SamLowe/roberta-base-go_emotions", top_k=None)
             import time
 
             sentences = ["I am not having a great day"]
@@ -143,7 +143,7 @@ def create_app():
             for i in comments:
                 if len(i)>512:
                     continue
-                if time.time() - start_time > 100:
+                if time.time() - start_time > 240:
                     break
                 model_outputs = classifier(i)
                 result[model_outputs[0][0]["label"]].append(i)
