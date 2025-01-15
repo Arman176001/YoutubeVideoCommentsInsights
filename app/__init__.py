@@ -11,7 +11,7 @@ def create_app():
     app = Flask(__name__)
     CORS(app)  # Enable CORS for all routes
     
-    classifier = pipeline(task="text-classification", model="SamLowe/roberta-base-go_emotions", top_k=None)
+    classifier = pipeline(task="text-classification", model="SamLowe/roberta-base-go_emotions", top_k=None, truncation=True)
     def get_comments(video_id, api_key):
         youtube = build('youtube', 'v3', developerKey=api_key)
         comments = []
@@ -73,28 +73,51 @@ def create_app():
 
         return batches
 
+    def chunk_text(text, max_tokens=6000):
+        words = text.split()
+        chunks = []
+        current_chunk = []
+
+        for word in words:
+            if len(" ".join(current_chunk) + " " + word) > max_tokens:
+                chunks.append(" ".join(current_chunk))
+                current_chunk = [word]
+            else:
+                current_chunk.append(word)
+
+        if current_chunk:
+            chunks.append(" ".join(current_chunk))
+        
+        return chunks
+
     def analyze_video(video_id):
         # Initialize Groq client
         client = Groq(api_key=os.getenv('GROQ_API_KEY'))
-        
-        # Get comments and transcript
-        comments = get_comments(video_id, os.getenv('GOOGLE_API_KEY'))
+
+        # Get transcript
         video_transcript = get_video_transcript(video_id)
+        transcript_chunks = chunk_text(video_transcript, max_tokens=8000)
+
+        # Summarize transcript in chunks
+        transcript_summaries = []
+        for chunk in transcript_chunks:
+            summary_response = client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": "Provide a detailed summary of the given chunk of a YouTube video transcript."},
+                    {"role": "user", "content": chunk}
+                ],
+                model="llama3-8b-8192",
+            )
+            transcript_summaries.append(summary_response.choices[0].message.content)
         
-        # Get transcript summary
-        transcript_summary_response = client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": "Provide a detailed summary of the given youtube video transcript"},
-                {"role": "user", "content": video_transcript}
-            ],
-            model="llama3-8b-8192",
-        )
-        transcript_summary = transcript_summary_response.choices[0].message.content
-        
-        # Batch and summarize comments
+        # Combine transcript summaries
+        combined_transcript_summary = " ".join(transcript_summaries)
+
+        # Get comments and analyze
+        comments = get_comments(video_id, os.getenv('GOOGLE_API_KEY'))
         comment_batches = batch_comments(comments)
         comment_summaries = []
-        
+
         for batch in comment_batches:
             summary_response = client.chat.completions.create(
                 model="llama3-8b-8192",
@@ -104,25 +127,26 @@ def create_app():
                 ]
             )
             comment_summaries.append(summary_response.choices[0].message.content)
-        
-        # Create final summary
+
+        # Combine comment summaries with transcript
         final_summary_response = client.chat.completions.create(
             model="llama3-8b-8192",
             messages=[
-                {"role": "system", "content": f"This is the summary of a YouTube video's transcript: {transcript_summary}. A user has commented on the video. Your task is to analyze these comments in the context of the video transcript. Based on the comment content and its relation to the transcript, please provide detailed insights."},
+                {"role": "system", "content": f"This is the summary of a YouTube video's transcript: {combined_transcript_summary}. A user has commented on the video. Your task is to analyze these comments in the context of the video transcript. Based on the comment content and its relation to the transcript, please provide detailed insights."},
                 {"role": "user", "content": " ".join(comment_summaries)}
             ]
         )
-        
+
         return final_summary_response.choices[0].message.content
+
 
     @app.route('/')
     def index():
         return render_template('index.html')
     
-    @app.route('/sentiment',methods=['POST'])
+    @app.route('/sentiment',methods=['GET'])
     def sentiment():
-        video_id = request.form.get('videoId')
+        video_id = request.args.get('videoId')
         
         try:
             comments = get_comments(video_id,os.getenv('GOOGLE_API_KEY'))
@@ -131,11 +155,9 @@ def create_app():
             sentences = ["I am not having a great day"]
             model_outputs = classifier(sentences)
             result = {model_outputs[0][i]['label']: [] for i in range(len(model_outputs[0]))}
-
+            
             start_time = time.time()
             for i in comments:
-                if len(i)>512:
-                    continue
                 if time.time() - start_time > 240:
                     break
                 model_outputs = classifier(i)
@@ -143,9 +165,9 @@ def create_app():
             return jsonify({"result": result})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
-    @app.route('/analyze', methods=['POST'])
+    @app.route('/analyze', methods=['GET'])
     def analyze():
-        video_id = request.form.get('videoId')
+        video_id = request.args.get('videoId')
         
         try:
             analysis_result = analyze_video(video_id)
