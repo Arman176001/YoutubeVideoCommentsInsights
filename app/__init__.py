@@ -122,14 +122,7 @@ def create_app():
     
     @app.route('/sentiment',methods=['POST'])
     def sentiment():
-        video_url = request.form.get('video_url')
-        import re
-        video_id_match = re.search(r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})', video_url)
-        
-        if not video_id_match:
-            return jsonify({"error": "Invalid YouTube URL"}), 400
-        
-        video_id = video_id_match.group(1)
+        video_id = request.form.get('videoId')
         
         try:
             comments = get_comments(video_id,os.getenv('GOOGLE_API_KEY'))
@@ -152,16 +145,7 @@ def create_app():
             return jsonify({"error": str(e)}), 500
     @app.route('/analyze', methods=['POST'])
     def analyze():
-        video_url = request.form.get('video_url')
-        
-        # Extract video ID from URL
-        import re
-        video_id_match = re.search(r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})', video_url)
-        
-        if not video_id_match:
-            return jsonify({"error": "Invalid YouTube URL"}), 400
-        
-        video_id = video_id_match.group(1)
+        video_id = request.form.get('videoId')
         
         try:
             analysis_result = analyze_video(video_id)
